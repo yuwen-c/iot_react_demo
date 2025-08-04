@@ -63,5 +63,23 @@ Installed 34 packages in 23ms
 # 啟動虛擬環境
 source .venv/bin/activate
 
-# 在虛擬環境中運行 Python 程式
+# 安裝 Mosquitto (才有辦法開發 sensor.py)
+brew install mosquitto
+
+# 啟動 Mosquitto
+brew services start mosquitto
+==> Successfully started `mosquitto` (label: homebrew.mxcl.mosquitto)
+
+# ====== sensor.py 開發======
+# 啟動 sensor.py
 python sensor/sensor.py
+
+# 訂閱 topic，在另一個 terminal 中監聽數據
+mosquitto_sub -h localhost -t "env/room01/reading" -v
+
+env/room01/reading {"temp": 25.3, "humidity": 51.3, "timestamp": "2025-08-04T09:18:22.047773Z"}
+env/room01/reading {"temp": 22.2, "humidity": 45.5, "timestamp": "2025-08-04T09:18:27.053150Z"}
+env/room01/reading {"temp": 29.0, "humidity": 50.4, "timestamp": "2025-08-04T09:18:32.058365Z"}
+
+# 測試
+python sensor/test_mqtt.py
