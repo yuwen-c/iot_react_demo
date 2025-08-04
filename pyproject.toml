@@ -1,0 +1,28 @@
+[project]
+name = "iot-react-demo"
+version = "0.1.0"
+description = "IoT 室內環境監控系統"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "paho-mqtt>=1.6.1",      # MQTT 客戶端 (sensor, controller)
+    "fastapi>=0.104.0",       # Web 框架 (server)
+    "uvicorn[standard]>=0.24.0", # ASGI 伺服器 (server)
+    "websockets>=12.0",       # WebSocket 支援 (server)
+    # "sqlite3",                # 資料庫 (controller, server) - Python 內建
+    "python-multipart>=0.0.6", # 檔案上傳支援 (server)
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.4.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+]
