@@ -165,6 +165,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "paho-mqtt" },
+    { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "websockets" },
@@ -191,6 +192,7 @@ requires-dist = [
     { name = "flake8", marker = "extra == 'dev'", specifier = ">=6.0.0" },
     { name = "paho-mqtt", specifier = ">=1.6.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.4.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-multipart", specifier = ">=0.0.6" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.24.0" },
     { name = "websockets", specifier = ">=12.0" },

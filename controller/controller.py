@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 環境監控控制器
-訂閱 MQTT 感測器數據，判斷警報條件，處理異常情況
+訂閱 MQTT 感測器數據，判斷警報條件，處理異常情況，寫入資料庫
 """
 
 import json
@@ -9,15 +9,14 @@ import os
 import time
 from datetime import datetime
 import paho.mqtt.client as mqtt
+from database import DatabaseManager
 
-# MQTT 配置
+# 從環境變數讀取配置
 MQTT_BROKER = os.getenv('MQTT_BROKER', 'localhost')
 MQTT_PORT = int(os.getenv('MQTT_PORT', 1883))
 MQTT_TOPIC = os.getenv('MQTT_TOPIC', 'env/room01/reading')
-
-# 警報閾值設定
-TEMP_THRESHOLD = 30.0  # 溫度閾值 (°C)
-HUMIDITY_THRESHOLD = 40.0  # 濕度閾值 (%)
+TEMP_THRESHOLD = float(os.getenv('TEMP_THRESHOLD', 30.0))
+HUMIDITY_THRESHOLD = float(os.getenv('HUMIDITY_THRESHOLD', 40.0))
 
 class EnvironmentController:
     def __init__(self):
@@ -26,6 +25,9 @@ class EnvironmentController:
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
+        
+        # 初始化資料庫管理器
+        self.db = DatabaseManager()
         
         # 統計數據
         self.message_count = 0
@@ -63,6 +65,12 @@ class EnvironmentController:
             print(f"📊 收到數據 #{self.message_count}")
             print(f"   溫度: {temp}°C, 濕度: {humidity}%")
             print(f"   時間: {timestamp}")
+            
+            # 儲存感測器數據到資料庫
+            if self.db.save_sensor_reading(data):
+                print("   儲存: ✅ 已寫入資料庫")
+            else:
+                print("   儲存: ❌ 寫入資料庫失敗")
             
             # 檢查警報條件
             alerts = self.check_alerts(temp, humidity)
@@ -109,8 +117,7 @@ class EnvironmentController:
         for alert in alerts:
             print(f"🚨 警報 #{self.alert_count}: {alert['message']}")
             
-            # 這裡之後可以替換為 WebSocket 發送
-            # 目前先用簡單的 print 輸出
+            # 準備警報資料
             alert_data = {
                 'alert_type': alert['type'],
                 'severity': alert['severity'],
@@ -119,14 +126,20 @@ class EnvironmentController:
                 'sensor_data': data
             }
             
-            # 模擬 WebSocket 發送（之後會替換）
+            # 儲存警報到資料庫
+            if self.db.save_alert(alert_data):
+                print(f"   儲存: ✅ 警報已寫入資料庫")
+            else:
+                print(f"   儲存: ❌ 警報寫入資料庫失敗")
+            
+            # 模擬 WebSocket 發送（之後會替換為 HTTP 通知）
             self.send_websocket_alert(alert_data)
             
     def send_websocket_alert(self, alert_data):
-        """模擬 WebSocket 發送警報（之後會實作真正的 WebSocket）"""
+        """模擬 WebSocket 發送警報（之後會替換為 HTTP 通知）"""
         print(f"📡 [WebSocket] 發送警報: {alert_data['alert_type']}")
         print(f"   內容: {alert_data['message']}")
-        # TODO: 實作真正的 WebSocket 發送
+        # TODO: 實作真正的 HTTP 通知到 Web Server
         
     def connect(self):
         """連接到 MQTT Broker"""
@@ -146,10 +159,15 @@ class EnvironmentController:
         
     def get_stats(self):
         """取得統計資訊"""
+        db_stats = self.db.get_statistics()
         return {
             'message_count': self.message_count,
             'alert_count': self.alert_count,
-            'connected': self.client.is_connected()
+            'connected': self.client.is_connected(),
+            'db_total_readings': db_stats['total_readings'],
+            'db_total_alerts': db_stats['total_alerts'],
+            'db_today_readings': db_stats['today_readings'],
+            'db_today_alerts': db_stats['today_alerts']
         }
         
     def run(self):
@@ -159,6 +177,7 @@ class EnvironmentController:
         print(f"📋 訂閱 Topic: {MQTT_TOPIC}")
         print(f"🚨 溫度閾值: {TEMP_THRESHOLD}°C")
         print(f"🚨 濕度閾值: {HUMIDITY_THRESHOLD}%")
+        print(f"💾 資料庫路徑: {self.db.db_path}")
         print("-" * 50)
         
         if not self.connect():
@@ -170,11 +189,13 @@ class EnvironmentController:
                 time.sleep(30)
                 stats = self.get_stats()
                 print(f"📈 統計: 收到 {stats['message_count']} 筆數據, 觸發 {stats['alert_count']} 次警報")
+                print(f"💾 資料庫: 總計 {stats['db_total_readings']} 筆讀數, {stats['db_total_alerts']} 筆警報")
                 
         except KeyboardInterrupt:
             print("\n🛑 控制器已停止")
             stats = self.get_stats()
             print(f"📊 最終統計: 收到 {stats['message_count']} 筆數據, 觸發 {stats['alert_count']} 次警報")
+            print(f"💾 資料庫統計: {stats['db_total_readings']} 筆讀數, {stats['db_total_alerts']} 筆警報")
             self.disconnect()
 
 if __name__ == "__main__":

@@ -97,3 +97,12 @@ env/room01/reading {"temp": 29.0, "humidity": 50.4, "timestamp": "2025-08-04T09:
 
 # 測試
 python sensor/test_mqtt.py
+
+#===== database 初始化設定 =====
+
+# 初始化資料庫
+uv run data/init_db.py
+# 資料庫會建立在：根目錄的 data/environment.db
+
+# 測試資料庫 controller 是否可正常連上db
+uv run controller/database.py
