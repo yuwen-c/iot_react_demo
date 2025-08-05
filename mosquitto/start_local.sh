@@ -1,6 +1,10 @@
 #!/bin/bash
 
+# 切換到腳本所在目錄，確保路徑正確
+cd "$(dirname "$0")"
+
 echo "🚀 啟動本機 Mosquitto MQTT Broker..."
+echo "📁 工作目錄: $(pwd)"
 
 # 檢查 Mosquitto 是否安裝（支援 Homebrew 安裝路徑）
 MOSQUITTO_PATH=""
@@ -38,7 +42,6 @@ sleep 3
 if pgrep -x "mosquitto" > /dev/null; then
     echo "✅ Mosquitto 啟動成功！"
     echo "📡 服務位址: localhost:1883"
-    echo "🌐 WebSocket: localhost:9001"
     echo ""
     echo "📋 測試指令:"
     echo "  mosquitto_sub -h localhost -t 'test' -v"

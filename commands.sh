@@ -67,18 +67,19 @@ source .venv/bin/activate
 brew install mosquitto
 
 
-# 兩種啟動mosquitto的方式，方法一：直接用brew service，會使用預設的檔案位置
+# ==== 兩種啟動mosquitto的方式 ====
+#方法一：直接用brew service，會使用預設的檔案位置
 
-# 啟動 Mosquitto
+## 啟動 Mosquitto
 brew services start mosquitto
 ==> Successfully started `mosquitto` (label: homebrew.mxcl.mosquitto)
 
-# 關閉 Mosquitto
+## 關閉 Mosquitto
 brew services stop mosquitto
 Stopping `mosquitto`... (might take a while)
 ==> Successfully stopped `mosquitto` (label: homebrew.mxcl.mosquitto)
 
-# 方法二，寫好 mosquitto/mosquitto.conf，並且指定用這個檔案啟動。已經寫好啟動的script:
+# 方法二：寫好 mosquitto/mosquitto.conf，並且指定用這個檔案啟動。已經寫好啟動的script:
 ## 開始
 mosquitto/start_local.sh
 ## 停止
