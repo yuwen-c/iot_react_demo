@@ -6,17 +6,15 @@
 
 import json
 import os
+import sys
 import time
 from datetime import datetime
 import paho.mqtt.client as mqtt
-from database import DatabaseManager
 
-# 從環境變數讀取配置
-MQTT_BROKER = os.getenv('MQTT_BROKER', 'localhost')
-MQTT_PORT = int(os.getenv('MQTT_PORT', 1883))
-MQTT_TOPIC = os.getenv('MQTT_TOPIC', 'env/room01/reading')
-TEMP_THRESHOLD = float(os.getenv('TEMP_THRESHOLD', 30.0))
-HUMIDITY_THRESHOLD = float(os.getenv('HUMIDITY_THRESHOLD', 40.0))
+# 添加專案根目錄到 Python 路徑，以便導入 config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import Config
+from database import DatabaseManager
 
 class EnvironmentController:
     def __init__(self):
@@ -36,10 +34,10 @@ class EnvironmentController:
     def on_connect(self, client, userdata, flags, rc):
         """MQTT 連接成功回調"""
         if rc == 0:
-            print(f"✅ 控制器已連接到 MQTT Broker: {MQTT_BROKER}:{MQTT_PORT}")
+            print(f"✅ 控制器已連接到 MQTT Broker: {Config.MQTT_BROKER}:{Config.MQTT_PORT}")
             # 訂閱感測器數據 topic
-            client.subscribe(MQTT_TOPIC, qos=1)
-            print(f"📡 已訂閱 Topic: {MQTT_TOPIC}")
+            client.subscribe(Config.MQTT_TOPIC, qos=1)
+            print(f"📡 已訂閱 Topic: {Config.MQTT_TOPIC}")
         else:
             print(f"❌ 連接失敗，錯誤碼: {rc}")
             
@@ -93,18 +91,18 @@ class EnvironmentController:
         alerts = []
         
         # 檢查溫度警報
-        if temp > TEMP_THRESHOLD:
+        if temp > Config.TEMP_THRESHOLD:
             alerts.append({
                 'type': 'high_temperature',
-                'message': f'高溫警報！當前溫度 {temp}°C 超過閾值 {TEMP_THRESHOLD}°C',
+                'message': f'高溫警報！當前溫度 {temp}°C 超過閾值 {Config.TEMP_THRESHOLD}°C',
                 'severity': 'warning'
             })
             
         # 檢查濕度警報
-        if humidity < HUMIDITY_THRESHOLD:
+        if humidity < Config.HUMIDITY_THRESHOLD:
             alerts.append({
                 'type': 'low_humidity',
-                'message': f'低濕度警報！當前濕度 {humidity}% 低於閾值 {HUMIDITY_THRESHOLD}%',
+                'message': f'低濕度警報！當前濕度 {humidity}% 低於閾值 {Config.HUMIDITY_THRESHOLD}%',
                 'severity': 'warning'
             })
             
@@ -144,8 +142,8 @@ class EnvironmentController:
     def connect(self):
         """連接到 MQTT Broker"""
         try:
-            print(f"🔗 正在連接到 MQTT Broker: {MQTT_BROKER}:{MQTT_PORT}")
-            self.client.connect(MQTT_BROKER, MQTT_PORT, 60)
+            print(f"🔗 正在連接到 MQTT Broker: {Config.MQTT_BROKER}:{Config.MQTT_PORT}")
+            self.client.connect(Config.MQTT_BROKER, Config.MQTT_PORT, 60)
             self.client.loop_start()
             return True
         except Exception as e:
@@ -173,10 +171,10 @@ class EnvironmentController:
     def run(self):
         """主運行循環"""
         print("🚀 啟動環境監控控制器...")
-        print(f"📡 目標 MQTT Broker: {MQTT_BROKER}:{MQTT_PORT}")
-        print(f"📋 訂閱 Topic: {MQTT_TOPIC}")
-        print(f"🚨 溫度閾值: {TEMP_THRESHOLD}°C")
-        print(f"🚨 濕度閾值: {HUMIDITY_THRESHOLD}%")
+        print(f"📡 目標 MQTT Broker: {Config.MQTT_BROKER}:{Config.MQTT_PORT}")
+        print(f"📋 訂閱 Topic: {Config.MQTT_TOPIC}")
+        print(f"🚨 溫度閾值: {Config.TEMP_THRESHOLD}°C")
+        print(f"🚨 濕度閾值: {Config.HUMIDITY_THRESHOLD}%")
         print(f"💾 資料庫路徑: {self.db.db_path}")
         print("-" * 50)
         

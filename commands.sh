@@ -87,7 +87,7 @@ mosquitto/stop_local.sh
 
 # ====== sensor.py 開發======
 # 啟動 sensor.py
-python sensor/sensor.py
+uv run sensor/sensor.py
 
 # 訂閱 topic，在另一個 terminal 中監聽數據
 mosquitto_sub -h localhost -t "env/room01/reading" -v
@@ -97,7 +97,7 @@ env/room01/reading {"temp": 22.2, "humidity": 45.5, "timestamp": "2025-08-04T09:
 env/room01/reading {"temp": 29.0, "humidity": 50.4, "timestamp": "2025-08-04T09:18:32.058365Z"}
 
 # 測試
-python sensor/test_mqtt.py
+uv run sensor/test_mqtt.py
 
 #===== database 初始化設定 =====
 
@@ -107,3 +107,6 @@ uv run data/init_db.py
 
 # 測試資料庫 controller 是否可正常連上db
 uv run controller/database.py
+
+#==== 啟動 controller.py =====
+uv run controller/controller.py

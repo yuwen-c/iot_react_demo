@@ -5,16 +5,16 @@
 """
 
 import json
+import os
+import sys
 import time
 import random
-import os
 from datetime import datetime
 import paho.mqtt.client as mqtt
 
-# MQTT 配置
-MQTT_BROKER = os.getenv('MQTT_BROKER', 'localhost')
-MQTT_PORT = int(os.getenv('MQTT_PORT', 1883))
-MQTT_TOPIC = os.getenv('MQTT_TOPIC', 'env/room01/reading')
+# 添加專案根目錄到 Python 路徑，以便導入 config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import Config
 
 class SensorSimulator:
     def __init__(self):
@@ -25,7 +25,7 @@ class SensorSimulator:
     def on_connect(self, client, userdata, flags, rc):
         """連接成功回調"""
         if rc == 0:
-            print(f"✅ 已連接到 MQTT Broker: {MQTT_BROKER}:{MQTT_PORT}")
+            print(f"✅ 已連接到 MQTT Broker: {Config.MQTT_BROKER}:{Config.MQTT_PORT}")
         else:
             print(f"❌ 連接失敗，錯誤碼: {rc}")
             
@@ -55,7 +55,7 @@ class SensorSimulator:
     def connect(self):
         """連接到 MQTT Broker"""
         try:
-            self.client.connect(MQTT_BROKER, MQTT_PORT, 60)
+            self.client.connect(Config.MQTT_BROKER, Config.MQTT_PORT, 60)
             self.client.loop_start()
             return True
         except Exception as e:
@@ -65,14 +65,14 @@ class SensorSimulator:
     def publish_data(self, data):
         """發布數據到 MQTT Topic"""
         message = json.dumps(data, ensure_ascii=False)
-        result = self.client.publish(MQTT_TOPIC, message, qos=1)
+        result = self.client.publish(Config.MQTT_TOPIC, message, qos=1)
         return result
         
     def run(self):
         """主運行循環"""
         print("🚀 啟動環境感測器模擬器...")
-        print(f"📡 目標 MQTT Broker: {MQTT_BROKER}:{MQTT_PORT}")
-        print(f"📋 發布 Topic: {MQTT_TOPIC}")
+        print(f"📡 目標 MQTT Broker: {Config.MQTT_BROKER}:{Config.MQTT_PORT}")
+        print(f"📋 發布 Topic: {Config.MQTT_TOPIC}")
         print("⏰ 數據發送間隔: 5秒")
         print("-" * 50)
         
