@@ -15,13 +15,13 @@
 brew services start mosquitto
 
 # 測試 MQTT 連接
-python test_mqtt.py
+cd sensor && python test_mqtt.py
 ```
 
 ### 2. 啟動感測器
 ```bash
 # 啟動感測器模擬器
-python sensor.py
+cd sensor && python sensor.py
 ```
 
 ### 3. 監聽數據
