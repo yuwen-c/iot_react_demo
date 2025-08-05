@@ -26,10 +26,11 @@ brew services start mosquitto
 ```
 iot-react-demo/
 ├── sensor/          # 感測器模擬
-├── controller/      # MQTT 控制器
-├── server/          # FastAPI 伺服器
+├── controller/      # MQTT 控制器 + 數據寫入
+├── server/          # FastAPI 伺服器 + 數據查詢
 ├── frontend/        # React 前端
 ├── mosquitto/       # MQTT 配置
+├── data/            # 共享資料庫檔案
 ├── pyproject.toml   # Python 依賴管理 (uv)
 └── .venv/           # Python 虛擬環境
 ```
@@ -53,22 +54,25 @@ mosquitto_sub -h localhost -t "test" -v
 
 ### 3. 開發順序
 1. **sensor/** - 模擬感測器數據發布
-2. **controller/** - MQTT 訂閱與警報判斷
-3. **server/** - FastAPI 伺服器與 WebSocket
+2. **controller/** - MQTT 訂閱、警報判斷、數據寫入、HTTP 通知
+3. **server/** - FastAPI 伺服器、接收 HTTP 警報、WebSocket 推播、數據查詢
 4. **frontend/** - React 前端應用
 
 ### 4. 測試流程
 ```bash
-# 終端 1: 啟動感測器
-cd sensor && python sensor.py
+# 終端 1: 啟動 MQTT Broker
+cd mosquitto && ./start_local.sh
 
-# 終端 2: 啟動控制器
-cd controller && python controller.py
+# 終端 2: 啟動感測器
+uv run sensor/sensor.py
 
-# 終端 3: 啟動伺服器
-cd server && uvicorn main:app --reload
+# 終端 3: 啟動控制器
+uv run controller/controller.py
 
-# 終端 4: 啟動前端
+# 終端 4: 啟動伺服器
+uv run server/main.py
+
+# 終端 5: 啟動前端
 cd frontend && npm run dev
 ```
 
@@ -77,11 +81,12 @@ cd frontend && npm run dev
 - **MQTT**: Eclipse Mosquitto
 - **後端**: Python + FastAPI + SQLite
 - **前端**: React + Vite + Chart.js
-- **通訊**: WebSocket + MQTT
+- **通訊**: WebSocket + MQTT + HTTP
 
 ## 共用 Python 依賴
 所有 Python 模組共用同一個 uv 環境，依賴定義在 `pyproject.toml`：
 - `paho-mqtt` - MQTT 客戶端
 - `fastapi` - Web 框架
 - `uvicorn` - ASGI 伺服器
-- `websockets` - WebSocket 支援 
+- `websockets` - WebSocket 支援
+- `requests` - HTTP 客戶端 (controller 通知 server) 

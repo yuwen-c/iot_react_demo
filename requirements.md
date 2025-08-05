@@ -35,23 +35,30 @@ controller.py 作為 MQTT client 訂閱此 Topic
 
 或濕度 < 40%
 
-則透過 WebSocket Server 發送警報訊息給前端
+則透過 HTTP 通知 Web Server 發送警報訊息
 
 警報訊息包含警告類型、當前溫濕度與提示文字
 
 2.4 數據持久化與歷史記錄
 使用 SQLite 資料庫進行數據持久化
 
-controller.py 將所有感測數據儲存至本地 SQLite 資料庫
+建立共享資料庫檔案 `data/environment.db`
+
+controller.py 將所有感測數據儲存至共享 SQLite 資料庫
 
 建立兩個主要資料表：
 - sensor_readings：儲存所有感測數據
 - alert_history：記錄所有警報事件
 
-提供數據查詢 API，支援歷史數據檢視與統計分析
+Web Server 提供數據查詢 API，支援歷史數據檢視與統計分析
 
 2.5 Web Server 與前端顯示
 使用 FastAPI 提供 REST API 與 WebSocket 服務
+
+接收來自 controller.py 的 HTTP 警報通知
+
+透過 WebSocket 即時推播警報給前端
+
 前端使用 React 框架，搭配圖表套件（Chart.js 或 Recharts）
 
 顯示溫度與濕度的即時折線圖
@@ -63,20 +70,22 @@ controller.py 將所有感測數據儲存至本地 SQLite 資料庫
 ## 3. 技術架構概述
 
 ```mermaid
-sensor.py → MQTT Broker (Mosquitto) ←→ controller.py → SQLite DB
-                      ↑                           ↓
-                 資料發布與訂閱              FastAPI Web Server + WebSocket ←→ React 前端
+sensor.py → MQTT Broker (Mosquitto) ←→ controller.py → SQLite DB (data/environment.db)
+                      ↑                           ↓                    ↑
+                 資料發布與訂閱              HTTP 警報通知        Web Server (FastAPI)
+                                                                    ↓
+                                                              WebSocket ←→ React 前端
 ```
 
 sensor.py：模擬感測器，負責資料產生與發布
 
 Mosquitto：負責 MQTT 通訊中繼
 
-controller.py：訂閱 MQTT，判斷警報，數據持久化，發送 WebSocket 訊息
+controller.py：訂閱 MQTT，判斷警報，數據持久化，HTTP 通知 Web Server
 
-SQLite DB：本地資料庫，儲存感測數據與警報歷史
+SQLite DB (data/environment.db)：共享資料庫，儲存感測數據與警報歷史
 
-FastAPI Web Server：提供前端頁面（或靜態資源）、REST API 及 WebSocket 即時推播
+FastAPI Web Server：提供前端頁面、REST API、接收 HTTP 警報通知及 WebSocket 即時推播
 
 React 前端：顯示資料視覺化、警報提示與歷史數據查詢
 
@@ -87,6 +96,8 @@ React 前端：顯示資料視覺化、警報提示與歷史數據查詢
 MQTT Client：paho-mqtt
 
 Web Server：FastAPI + uvicorn
+
+HTTP 通訊：requests (controller 通知 Web Server)
 
 WebSocket：FastAPI 內建 WebSocket 支援
 
@@ -102,7 +113,7 @@ React 使用 Vite 作為開發與建置工具
 
 練習 MQTT Broker 與 MQTT Client 與感測器模擬
 
-練習 WebSocket 即時推播機制
+練習 HTTP 服務間通訊與 WebSocket 即時推播機制
 
 強化 React 前端即時資料視覺化能力
 

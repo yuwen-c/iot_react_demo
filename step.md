@@ -13,19 +13,26 @@
 測試是否能接收 sensor.py 的數據
 實現基本的警報判斷邏輯
 
-第二階段：數據持久化
+第二階段：數據持久化與共享資料庫
 
-建立 SQLite 資料庫
+建立 data/ 目錄存放共享資料庫
+建立 controller/database.py 模組
 設計資料表結構 (sensor_readings, alert_history)
 實現數據儲存功能
 測試數據持久化是否正常
+建立 server/database.py 模組
+實現數據查詢功能
+測試 Web Server 是否能讀取共享資料庫
 
-第三階段：WebSocket 即時通訊
+第三階段：HTTP 警報通知機制
 
 開發 FastAPI Server
 建立基本的 REST API
+實現 /api/alerts endpoint 接收 HTTP 警報通知
+修改 controller.py 加入 HTTP 通知功能
+測試 controller.py 到 FastAPI 的警報通知
 實現 WebSocket 連接
-測試 controller.py 到 FastAPI 的警報推播
+測試 WebSocket 即時推播功能
 
 第四階段：前端開發
 
@@ -38,6 +45,6 @@
 第五階段：整合測試
 
 端到端測試
-測試完整數據流
+測試完整數據流：Sensor → MQTT → Controller → HTTP → Server → WebSocket → Frontend
 優化性能和穩定性
 部署和監控
