@@ -59,6 +59,16 @@ async def get_sensor_readings_by_date_range(
     end_date: str = Query(..., description="結束日期 (YYYY-MM-DD)")
 ):
     """根據日期範圍取得感測器讀數"""
+    # 驗證日期格式
+    try:
+        from datetime import datetime
+        start = datetime.strptime(start_date, "%Y-%m-%d")
+        end = datetime.strptime(end_date, "%Y-%m-%d")
+        if start > end:
+            raise ValueError("開始日期不能晚於結束日期")
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=f"無效的日期格式或範圍: {str(e)}")
+    
     try:
         readings = db_manager.get_sensor_readings_by_date_range(start_date, end_date)
         return {

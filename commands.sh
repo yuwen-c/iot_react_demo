@@ -116,5 +116,6 @@ uv run controller/controller.py
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 http://0.0.0.0:8000/
 
-# 測試目前現有端點
-cd server && uv run test_main.py
+# 測試目前現有端點 (已改寫，改為使用pytest)
+# cd server && uv run test_main.py
+uv run pytest -v server/tests/
