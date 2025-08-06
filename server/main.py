@@ -11,11 +11,12 @@ import os
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-import uvicorn
 from config import Config
+
+# 導入 API 路由
+from server.api import sensor
 
 # 建立 FastAPI 應用程式
 app = FastAPI(
@@ -68,6 +69,9 @@ async def get_config():
         "temp_threshold": Config.TEMP_THRESHOLD,
         "humidity_threshold": Config.HUMIDITY_THRESHOLD
     }
+
+# 註冊 API 路由
+app.include_router(sensor.router)
 
 # 啟動伺服器
 # uvicorn main:app --host 0.0.0.0 --port 8000 --reload
