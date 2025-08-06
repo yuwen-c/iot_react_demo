@@ -110,3 +110,11 @@ uv run controller/database.py
 
 #==== 啟動 controller.py =====
 uv run controller/controller.py
+
+#==== 開發 fastapi server =====
+## 啟動server
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+http://0.0.0.0:8000/
+
+# 測試目前現有端點
+cd server && uv run test_main.py

@@ -46,6 +46,14 @@ iot-react-demo/
 ## 架構流程圖
 
 ```
+[sensor.py] ──(MQTT)──▶ [MQTT broker] ──▶ [controller.py]
+                                              ├─ 儲存數據到資料庫 (SQLite)
+                                              └─ 發 HTTP 通知 → [FastAPI server]
+                                                                  ├─ 推播警報 (WebSocket)
+                                                                  └─ 提供歷史 API → [React 前端]
+```
+
+```
           +---------------------+
           |     sensor.py       | ← 模擬資料，每 5 秒發送 MQTT
           +----------+----------+
