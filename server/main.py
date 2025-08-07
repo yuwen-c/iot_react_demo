@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import Config
 
 # 導入 API 路由
-from server.api import sensor
+from server.api import sensor, alerts
 
 # 建立 FastAPI 應用程式
 app = FastAPI(
@@ -72,6 +72,7 @@ async def get_config():
 
 # 註冊 API 路由
 app.include_router(sensor.router)
+app.include_router(alerts.router)
 
 # 啟動伺服器
-# uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+# cd server && uvicorn main:app --host 0.0.0.0 --port 8000 --reload
