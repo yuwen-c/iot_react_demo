@@ -125,3 +125,7 @@ uv run pytest server/tests/test_alert_history.py -v
 curl "http://localhost:8000/api/alerts/history" | uv run python -m json.tool
 
 curl "http://localhost:8000/api/alerts/history?alert_type=low_humidity" | uv run python -m json.tool
+
+# 測試接收警告端點
+
+cd /Users/marina/Documents/github/iot-react-demo && uv run pytest server/tests/test_alert_notification.py -v

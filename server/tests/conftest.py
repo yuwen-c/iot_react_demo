@@ -11,6 +11,7 @@ import pytest_asyncio
 import asyncio
 import httpx
 from httpx import AsyncClient
+from fastapi.testclient import TestClient
 
 # 將專案根目錄加入 Python 路徑
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -36,3 +37,8 @@ def event_loop():
     """提供事件循環"""
     loop = asyncio.get_event_loop()
     yield loop
+
+@pytest.fixture
+def websocket_client():
+    """提供 WebSocket 測試客戶端"""
+    return TestClient(app)

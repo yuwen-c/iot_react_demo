@@ -7,7 +7,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, List, Any
 
-from server.database import get_db_manager
+from server.core import get_db_manager
 
 # 建立路由器
 router = APIRouter(

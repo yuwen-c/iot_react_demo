@@ -9,11 +9,20 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from pydantic import BaseModel, Field
 
-from server.database import get_db_manager
+from server.core import get_db_manager
+from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
-# 定義回應模型
+# 定義請求和回應模型
+class AlertNotificationRequest(BaseModel):
+    """警報通知請求模型"""
+    alert_type: str
+    severity: str
+    message: str
+    timestamp: str
+    sensor_data: Dict[str, Any]
+
 class AlertResponse(BaseModel):
     """警報資料回應模型"""
     id: int
@@ -39,6 +48,50 @@ class AlertStatisticsResponse(BaseModel):
     data: Dict[str, Any]
 
 # API 路由
+@router.post("/notify")
+async def notify_alert(alert: AlertNotificationRequest):
+    """
+    接收來自 Controller 的警報通知
+    
+    參數:
+    - alert: 警報通知資料
+    """
+    # 驗證警報類型
+    valid_alert_types = ["high_temperature", "low_humidity"]
+    if alert.alert_type not in valid_alert_types:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "detail": {
+                    "message": f"無效的警報類型。有效類型: {', '.join(valid_alert_types)}"
+                }
+            }
+        )
+    
+    # 驗證嚴重程度
+    valid_severities = ["info", "warning", "error"]
+    if alert.severity not in valid_severities:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "detail": {
+                    "message": f"無效的嚴重程度。有效程度: {', '.join(valid_severities)}"
+                }
+            }
+        )
+    
+    # TODO: 實作 WebSocket 推播功能
+    
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": "success",
+            "message": "警報通知已接收並推播"
+        }
+    )
+
 @router.get("/history", response_model=AlertListResponse)
 async def get_alert_history(
     alert_type: Optional[str] = None,

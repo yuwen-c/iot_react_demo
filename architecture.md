@@ -20,8 +20,11 @@ iot-react-demo/
 │   ├── api/                  # REST API 路由
 │   │   ├── __init__.py
 │   │   ├── sensor_data.py    # 感測數據查詢 API
-│   │   └── alerts.py         # 警報歷史查詢 API
-│   ├── database.py           # SQLite 資料庫查詢模組
+│   │   └── alerts.py         # 警報歷史查詢與通知 API
+│   ├── core/                 # 核心基礎設施
+│   │   ├── __init__.py
+│   │   ├── database.py       # 資料庫管理模組
+│   │   └── websocket.py         # WebSocket 連線管理
 │   ├── static/               # 放 React build 後靜態檔案
 │   ├── requirements.txt
 │   └── Dockerfile
@@ -114,12 +117,15 @@ iot-react-demo/
 - **server/main.py**: 接收 HTTP 警報、WebSocket 推播、REST API、數據查詢
 - **React Frontend**: 即時數據顯示、警報接收、歷史查詢
 
+### **核心基礎設施**
+- **server/core/database.py**: 資料庫管理（查詢操作、連線管理）
+- **server/core/websocket.py**: WebSocket 連線管理與推播
+
 ### **資料庫管理**
 - **data/schema.sql**: 資料庫 Schema 定義（感測器讀數表、警報歷史表）
 - **data/init_db.py**: 資料庫初始化腳本（建立資料表、索引）
 - **data/environment.db**: 共享 SQLite 資料庫檔案
 - **controller/database.py**: 資料庫寫入操作（儲存感測數據、警報記錄）
-- **server/database.py**: 資料庫查詢操作（歷史數據、統計資訊）
 
 ### **配置管理**
 - **config.py**: 專案配置管理（資料庫路徑、MQTT 設定、警報閾值）
