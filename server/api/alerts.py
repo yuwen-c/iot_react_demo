@@ -56,7 +56,7 @@ async def get_alert_history(
     - offset: 分頁偏移量
     """
     # 驗證警報類型
-    valid_alert_types = ["temperature", "humidity"]
+    valid_alert_types = ["high_temperature", "low_humidity"]
     if alert_type and alert_type not in valid_alert_types:
         raise HTTPException(
             status_code=400,
@@ -78,17 +78,12 @@ async def get_alert_history(
         )
     
     db = get_db_manager()
-    alerts = db.get_alert_history(limit=limit)  # 暫時使用現有方法
-    
-    # 套用過濾條件
-    if alert_type:
-        alerts = [alert for alert in alerts if alert["alert_type"] == alert_type]
-    if severity:
-        alerts = [alert for alert in alerts if alert["severity"] == severity]
-    
-    # 套用分頁
-    total_count = len(alerts)
-    alerts = alerts[offset:offset + limit]
+    alerts, total_count = db.get_alert_history(
+        limit=limit,
+        offset=offset,
+        alert_type=alert_type,
+        severity=severity
+    )
     
     return AlertListResponse(
         data=alerts,
@@ -128,11 +123,16 @@ async def get_alert_history_by_date_range(
             )
             
         db = get_db_manager()
-        alerts = []  # 暫時回傳空列表，等待資料庫方法實作
+        alerts, total_count = db.get_alert_history_by_date_range(
+            start_date=start_date,
+            end_date=end_date,
+            alert_type=alert_type,
+            severity=severity
+        )
         
         return AlertListResponse(
             data=alerts,
-            count=len(alerts)
+            count=total_count
         )
         
     except ValueError:
@@ -157,16 +157,7 @@ async def get_alert_statistics() -> AlertStatisticsResponse:
     - latest_alert_time: 最新警報時間
     """
     db = get_db_manager()
-    
-    # 暫時回傳假資料，等待資料庫方法實作
-    stats = {
-        "total_alerts": 0,
-        "alerts_by_type": {},
-        "alerts_by_severity": {},
-        "alerts_last_24h": 0,
-        "latest_alert_time": None
-    }
-    
+    stats = db.get_alert_statistics()
     return AlertStatisticsResponse(data=stats)
 
 # 移除 handle_error 函數，直接使用 HTTPException
