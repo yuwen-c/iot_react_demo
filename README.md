@@ -25,15 +25,26 @@ brew services start mosquitto
 ### 專案結構
 ```
 iot-react-demo/
-├── sensor/          # 感測器模擬
-├── controller/      # MQTT 控制器 + 數據寫入
-├── server/          # FastAPI 伺服器 + 數據查詢
+├── sensor/          # 感測器模擬，產生並發布溫濕度數據 (publisher)(script)
+├── controller/      # 訂閱 MQTT Broker 接收感測器數據 + 數據寫入 + 發送警報 (subscriber)(script)
+├── server/          # FastAPI 伺服器 + 數據查詢 (server)
 ├── frontend/        # React 前端
-├── mosquitto/       # MQTT 配置
+├── mosquitto/       # MQTT 配置，接收數據並發布，管理連線和訂閱 (broker，server `-d` 背景執行)(server)
 ├── data/            # 共享資料庫檔案
 ├── pyproject.toml   # Python 依賴管理 (uv)
 └── .venv/           # Python 虛擬環境
 ```
+
+## 數據流向
+
+```mermaid
+sensor.py → MQTT Broker → controller.py → SQLite DB (data/environment.db)
+                                    ↓
+                            HTTP 通知 → server/main.py
+                                           ↓
+                                    WebSocket → React 前端
+```
+
 
 ## 開發流程
 
@@ -58,19 +69,20 @@ mosquitto_sub -h localhost -t "test" -v
 3. **server/** - FastAPI 伺服器、接收 HTTP 警報、WebSocket 推播、數據查詢
 4. **frontend/** - React 前端應用
 
-### 4. 測試流程
+### 4. 進入開發環境指令
 ```bash
-# 終端 1: 啟動 MQTT Broker
+# 終端 1: 啟動 MQTT Broker (背景執行)
 cd mosquitto && ./start_local.sh
 
-# 終端 2: 啟動感測器
+# 終端 2: 啟動感測器(感測器模擬，產生並發布溫濕度數據)
 uv run sensor/sensor.py
 
-# 終端 3: 啟動控制器
+# 終端 3: 啟動控制器(訂閱 MQTT Broker 接收感測器數據 + 數據寫入 + 發送警報)
 uv run controller/controller.py
 
 # 終端 4: 啟動伺服器
-uv run server/main.py
+# 在專案根目錄執行
+uv run uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
 
 # 終端 5: 啟動前端
 cd frontend && npm run dev

@@ -11,12 +11,13 @@ import os
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from config import Config
 
-# 導入 API 路由
+# 導入 API 路由與核心模組
 from server.api import sensor, alerts
+from server.core import manager
 
 # 建立 FastAPI 應用程式
 app = FastAPI(
@@ -69,6 +70,29 @@ async def get_config():
         "temp_threshold": Config.TEMP_THRESHOLD,
         "humidity_threshold": Config.HUMIDITY_THRESHOLD
     }
+
+# WebSocket 路由
+@app.websocket("/ws/alerts")
+async def websocket_endpoint(websocket: WebSocket):
+    """
+    警報 WebSocket 端點
+    用於即時推播警報通知給前端
+    """
+    try:
+        # 接受 WebSocket 連線
+        await manager.connect(websocket)
+        
+        # 保持連線開啟
+        while True:
+            # 等待接收訊息（主要是為了檢測連線狀態）
+            data = await websocket.receive_text()
+            
+    except WebSocketDisconnect:
+        # 連線關閉時，從管理器中移除
+        manager.disconnect(websocket)
+    except Exception as e:
+        print(f"❌ WebSocket 錯誤: {e}")
+        manager.disconnect(websocket)
 
 # 註冊 API 路由
 app.include_router(sensor.router)

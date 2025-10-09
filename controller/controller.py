@@ -130,14 +130,8 @@ class EnvironmentController:
             else:
                 print(f"   儲存: ❌ 警報寫入資料庫失敗")
             
-            # 模擬 WebSocket 發送（之後會替換為 HTTP 通知）
-            self.send_websocket_alert(alert_data)
-            
-    def send_websocket_alert(self, alert_data):
-        """模擬 WebSocket 發送警報（之後會替換為 HTTP 通知）"""
-        print(f"📡 [WebSocket] 發送警報: {alert_data['alert_type']}")
-        print(f"   內容: {alert_data['message']}")
-        # TODO: 實作真正的 HTTP 通知到 Web Server
+            # todo: 實作 HTTP 通知到 Web Server
+
         
     def connect(self):
         """連接到 MQTT Broker"""
