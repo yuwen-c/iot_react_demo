@@ -10,6 +10,7 @@ import sys
 import time
 from datetime import datetime
 import paho.mqtt.client as mqtt
+import httpx
 
 # 添加專案根目錄到 Python 路徑，以便導入 config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -26,6 +27,9 @@ class EnvironmentController:
         
         # 初始化資料庫管理器
         self.db = DatabaseManager()
+        
+        # 初始化 HTTP 客戶端（用於通知 Web Server）
+        self.http_client = httpx.Client(timeout=5.0)
         
         # 統計數據
         self.message_count = 0
@@ -130,8 +134,31 @@ class EnvironmentController:
             else:
                 print(f"   儲存: ❌ 警報寫入資料庫失敗")
             
-            # todo: 實作 HTTP 通知到 Web Server
-
+            # 發送 HTTP 通知到 Web Server
+            self.send_alert_to_server(alert_data)
+    
+    def send_alert_to_server(self, alert_data):
+        """發送警報通知到 Web Server"""
+        try:
+            # 構建 API URL
+            api_url = f"{Config.WEB_SERVER_URL}/api/alerts/notify"
+            
+            # 發送 POST 請求
+            response = self.http_client.post(api_url, json=alert_data)
+            
+            if response.status_code == 200:
+                print(f"   通知: ✅ 已發送到 Web Server")
+                print(f"   回應: {response.json().get('message', 'OK')}")
+            else:
+                print(f"   通知: ⚠️ Web Server 回應異常 (狀態碼: {response.status_code})")
+                print(f"   錯誤: {response.text}")
+                
+        except httpx.ConnectError:
+            print(f"   通知: ❌ 無法連接到 Web Server ({Config.WEB_SERVER_URL})")
+        except httpx.TimeoutException:
+            print(f"   通知: ⏱️ 連接 Web Server 超時")
+        except Exception as e:
+            print(f"   通知: ❌ 發送失敗: {e}")
         
     def connect(self):
         """連接到 MQTT Broker"""
@@ -145,9 +172,10 @@ class EnvironmentController:
             return False
             
     def disconnect(self):
-        """斷開 MQTT 連接"""
+        """斷開 MQTT 連接並關閉 HTTP 客戶端"""
         self.client.loop_stop()
         self.client.disconnect()
+        self.http_client.close()
         
     def get_stats(self):
         """取得統計資訊"""
@@ -167,6 +195,7 @@ class EnvironmentController:
         print("🚀 啟動環境監控控制器...")
         print(f"📡 目標 MQTT Broker: {Config.MQTT_BROKER}:{Config.MQTT_PORT}")
         print(f"📋 訂閱 Topic: {Config.MQTT_TOPIC}")
+        print(f"🌐 Web Server URL: {Config.WEB_SERVER_URL}")
         print(f"🚨 溫度閾值: {Config.TEMP_THRESHOLD}°C")
         print(f"🚨 濕度閾值: {Config.HUMIDITY_THRESHOLD}%")
         print(f"💾 資料庫路徑: {self.db.db_path}")

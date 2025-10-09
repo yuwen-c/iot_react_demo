@@ -22,6 +22,10 @@ class SensorSimulator:
         self.client.on_connect = self.on_connect
         self.client.on_publish = self.on_publish
         
+        # 週期性異常模式的計數器
+        self.publish_count = 0
+        self.abnormal_interval = 5  # 每隔 5 次發送一次異常數據
+        
     def on_connect(self, client, userdata, flags, rc):
         """連接成功回調"""
         if rc == 0:
@@ -34,17 +38,44 @@ class SensorSimulator:
         print(f"📤 數據已發布 (ID: {mid})")
         
     def generate_sensor_data(self):
-        """生成模擬感測器數據"""
+        """生成模擬感測器數據（正常範圍內）"""
         # 模擬真實環境的溫濕度變化
         base_temp = 25.0
-        base_humidity = 50.0
+        base_humidity = 52.0
         
-        # 添加隨機變化
-        temp = base_temp + random.uniform(-3, 5)  # 22-30°C
-        humidity = base_humidity + random.uniform(-15, 15)  # 35-65%
+        # 添加隨機變化（確保不觸發警報）
+        temp = base_temp + random.uniform(-3, 4)  # 22-29°C（不超過閾值 30°C）
+        humidity = base_humidity + random.uniform(-10, 13)  # 42-65%（不低於閾值 40%）
         
-        # 確保濕度在合理範圍內
-        humidity = max(20, min(80, humidity))
+        # 確保在安全範圍內
+        temp = max(20, min(29, temp))
+        humidity = max(42, min(65, humidity))
+        
+        return {
+            "temp": round(temp, 1),
+            "humidity": round(humidity, 1),
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+    
+    def generate_abnormal_sensor_data(self):
+        """生成異常感測器數據（用於觸發警報測試）"""
+        # 隨機選擇異常類型：高溫或低濕度
+        anomaly_type = random.choice(['high_temp', 'low_humidity', 'both'])
+        
+        if anomaly_type == 'high_temp':
+            # 生成高溫異常數據（超過閾值 30°C）
+            temp = Config.TEMP_THRESHOLD + random.uniform(1, 8)  # 31-38°C
+            humidity = random.uniform(45, 65)  # 正常濕度
+            
+        elif anomaly_type == 'low_humidity':
+            # 生成低濕度異常數據（低於閾值 40%）
+            temp = random.uniform(22, 28)  # 正常溫度
+            humidity = Config.HUMIDITY_THRESHOLD - random.uniform(5, 15)  # 25-35%
+            
+        else:  # both - 同時異常
+            # 同時觸發高溫和低濕度警報
+            temp = Config.TEMP_THRESHOLD + random.uniform(1, 8)  # 31-38°C
+            humidity = Config.HUMIDITY_THRESHOLD - random.uniform(5, 15)  # 25-35%
         
         return {
             "temp": round(temp, 1),
@@ -74,6 +105,7 @@ class SensorSimulator:
         print(f"📡 目標 MQTT Broker: {Config.MQTT_BROKER}:{Config.MQTT_PORT}")
         print(f"📋 發布 Topic: {Config.MQTT_TOPIC}")
         print("⏰ 數據發送間隔: 5秒")
+        print(f"🚨 異常數據週期: 每 {self.abnormal_interval} 次發送一次異常數據")
         print("-" * 50)
         
         if not self.connect():
@@ -81,20 +113,32 @@ class SensorSimulator:
             
         try:
             while True:
-                # 生成感測器數據
-                data = self.generate_sensor_data()
+                self.publish_count += 1
+                
+                # 週期性發送異常數據
+                if self.publish_count % self.abnormal_interval == 0:
+                    # 生成異常感測器數據
+                    data = self.generate_abnormal_sensor_data()
+                    is_abnormal = True
+                else:
+                    # 生成正常感測器數據
+                    data = self.generate_sensor_data()
+                    is_abnormal = False
                 
                 # 發布數據
                 self.publish_data(data)
                 
-                # 顯示數據
-                print(f"📊 溫度: {data['temp']}°C, 濕度: {data['humidity']}%")
+                # 顯示數據（異常數據用特殊標記）
+                status_icon = "🚨" if is_abnormal else "📊"
+                status_text = " [異常數據]" if is_abnormal else ""
+                print(f"{status_icon} #{self.publish_count} 溫度: {data['temp']}°C, 濕度: {data['humidity']}%{status_text}")
                 
                 # 等待5秒
                 time.sleep(5)
                 
         except KeyboardInterrupt:
             print("\n🛑 感測器已停止")
+            print(f"📊 總共發送: {self.publish_count} 筆數據")
             self.client.loop_stop()
             self.client.disconnect()
 
