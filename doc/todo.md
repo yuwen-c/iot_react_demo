@@ -25,13 +25,10 @@ WebSocket 即時通訊
 圖表視覺化
 狀態管理：React 內建（useState/useContext）
 
-## doing
-
-- 1. 專案初始化工具選擇
-
 ## todo
 
-2. 與後端整合的關鍵點
+1. 專案初始化工具選擇
+1. 與後端整合的關鍵點
 根據你的 server/main.py，後端已經準備好：
 CORS 設定：已允許 localhost:5173 (Vite) 和 localhost:3000 (CRA)
 WebSocket 端點：ws://localhost:8000/ws/alerts - 用於即時警報推播
@@ -42,7 +39,7 @@ REST API 端點：
 /api/alerts/statistics - 警報統計
 /api/sensor/* - 感測器數據查詢
 
-3. 必要的 npm 套件規劃
+1. 必要的 npm 套件規劃
 核心框架：react, react-dom
 路由：react-router-dom (如果有多頁面需求)
 HTTP 請求：axios 或 fetch (內建)
@@ -54,13 +51,13 @@ WebSocket：原生 WebSocket API 或 socket.io-client
 UI 組件庫（可選）：
 antd / Material-UI / shadcn/ui
 或使用 Tailwind CSS 自建
-4. 即時數據處理架構
+1. 即時數據處理架構
 需要處理兩種數據流：
 WebSocket 即時警報：當 controller 偵測到異常時推播
 輪詢或初始載入：定期取得感測器歷史數據
 需考慮 WebSocket 重連機制、錯誤處理
 
-7. UI/UX 功能規劃
+1. UI/UX 功能規劃
 基於你的系統，前端應包含：
 即時監控儀表板：顯示當前溫濕度
 歷史數據圖表：使用 Chart.js 繪製趨勢
@@ -88,11 +85,10 @@ frontend/
 使用 Material UI 的現代化設計
 
 確認後我會執行以下步驟：
-在 frontend/ 目錄初始化 Vite + React + TypeScript 專案
-安裝 Material UI 及相關依賴
-設定 TypeScript 配置
+ok在 frontend/ 目錄初始化 Vite + React + TypeScript 專案
+ok安裝 Material UI 及相關依賴
+ok設定 TypeScript 配置
 建立基本的專案結構
 建立簡單的儀表板 UI 框架（純前端，先用假資料）
 設定 MUI 主題
-你確定要現在開始建立專案嗎？
 

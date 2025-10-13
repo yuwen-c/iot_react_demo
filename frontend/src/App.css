@@ -1,42 +1,270 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* 全局重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* 應用容器 */
+.app-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
 }
 
-@keyframes logo-spin {
+/* 頂部標題列 */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 20px 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.app-header h1 {
+  font-size: 28px;
+  color: #2d3748;
+  font-weight: 700;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #4a5568;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-dot.connected {
+  background-color: #48bb78;
+  box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.7);
+}
+
+.status-dot.disconnected {
+  background-color: #f56565;
+  box-shadow: 0 0 0 0 rgba(245, 101, 101, 0.7);
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(72, 187, 120, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(72, 187, 120, 0);
+  }
+}
+
+/* 警報通知區 */
+.alert-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.alert {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
   from {
-    transform: rotate(0deg);
+    transform: translateY(-20px);
+    opacity: 0;
   }
   to {
-    transform: rotate(360deg);
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+.alert-warning {
+  background: #fef5e7;
+  border-left: 4px solid #f39c12;
+}
+
+.alert-danger {
+  background: #fadbd8;
+  border-left: 4px solid #e74c3c;
+}
+
+.alert-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.alert-message {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.alert-time {
+  font-size: 12px;
+  color: #718096;
+}
+
+.alert-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #a0aec0;
+  padding: 5px 10px;
+  transition: color 0.2s;
+}
+
+.alert-close:hover {
+  color: #2d3748;
+}
+
+/* 主要內容區 */
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 即時狀態卡區 */
+.status-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.status-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.status-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+}
+
+.temperature-card {
+  border-top: 4px solid #f56565;
+}
+
+.humidity-card {
+  border-top: 4px solid #4299e1;
+}
+
+.card-icon {
+  font-size: 48px;
+  flex-shrink: 0;
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-label {
+  font-size: 14px;
+  color: #718096;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-value {
+  font-size: 42px;
+  font-weight: 700;
+  color: #2d3748;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.card-value .unit {
+  font-size: 24px;
+  color: #a0aec0;
+  margin-left: 4px;
+}
+
+.card-status {
+  font-size: 14px;
+  color: #4a5568;
+  font-weight: 500;
+}
+
+/* 圖表區域 */
+.chart-section {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.chart-container {
+  height: 400px;
+  position: relative;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+  .app-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+
+  .app-header h1 {
+    font-size: 24px;
+  }
+
+  .status-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-container {
+    height: 300px;
+  }
+
+  .card-value {
+    font-size: 36px;
   }
 }
 
-.card {
-  padding: 2em;
-}
+@media (max-width: 480px) {
+  .app-container {
+    padding: 10px;
+  }
 
-.read-the-docs {
-  color: #888;
+  .app-header {
+    padding: 15px;
+  }
+
+  .status-card {
+    padding: 20px;
+  }
+
+  .chart-section {
+    padding: 20px;
+  }
 }
