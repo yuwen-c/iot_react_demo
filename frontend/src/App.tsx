@@ -11,6 +11,7 @@ import {
   Filler            // 填充區域（折線下方的漸層色）
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
+import { API_ENDPOINTS, CONFIG } from './config'
 import './App.css'
 
 // 註冊 Chart.js 組件
@@ -38,69 +39,112 @@ interface Alert {
   timestamp: string
 }
 
+// 後端 API 回傳的資料格式
+interface ApiSensorData {
+  id: number
+  temp: number
+  humidity: number
+  timestamp: string
+  created_at: string
+}
+
 function App() {
-  // 狀態管理
-  const [currentTemp, setCurrentTemp] = useState<number>(28.5)
-  const [currentHumidity, setCurrentHumidity] = useState<number>(65)
+  const [currentTemp, setCurrentTemp] = useState<number>(0)
+  const [currentHumidity, setCurrentHumidity] = useState<number>(0)
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [historicalData, setHistoricalData] = useState<SensorData[]>([])
   const [isConnected] = useState<boolean>(true) // 之後會連接真實 WebSocket
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // 生成假的歷史數據（模擬最近 30 筆數據）
+  // 格式化時間戳記為圖表顯示格式
+  const formatTimestamp = (timestamp: string): string => {
+    const date = new Date(timestamp)
+    return date.toLocaleTimeString('zh-TW', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  }
+
   useEffect(() => {
-    const generateFakeData = () => {
-      const data: SensorData[] = []
-      const now = new Date()
-      
-      for (let i = 29; i >= 0; i--) {
-        const time = new Date(now.getTime() - i * 60000) // 每分鐘一筆
-        data.push({
-          timestamp: time.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-          temperature: 25 + Math.random() * 8, // 25-33°C
-          humidity: 50 + Math.random() * 30 // 50-80%
-        })
+    const fetchHistoricalData = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        
+        // 呼叫後端 API 取得最近 N 筆數據
+        const response = await fetch(`${API_ENDPOINTS.sensor.readings}?limit=${CONFIG.HISTORY_DATA_LIMIT}`)
+        
+        if (!response.ok) {
+          throw new Error(`HTTP 錯誤！狀態碼: ${response.status}`)
+        }
+        
+        const result = await response.json()
+        
+        if (result.status === 'success' && result.data) {
+          // 後端回傳的資料是降序（最新在前），需要反轉成升序（舊到新）
+          const reversedData = [...result.data].reverse()
+          
+          // 轉換資料格式
+          const formattedData: SensorData[] = reversedData.map((item: ApiSensorData) => ({
+            timestamp: formatTimestamp(item.timestamp),
+            temperature: item.temp,
+            humidity: item.humidity
+          }))
+          
+          setHistoricalData(formattedData)
+          
+          // 設定當前數值為最新一筆（陣列最後一個）
+          if (formattedData.length > 0) {
+            const latest = formattedData[formattedData.length - 1]
+            setCurrentTemp(latest.temperature)
+            setCurrentHumidity(latest.humidity)
+          }
+          
+          console.log('✅ 成功載入歷史數據，共', formattedData.length, '筆')
+        } else {
+          throw new Error('API 回傳格式錯誤')
+        }
+      } catch (err) {
+        console.error('❌ 無法取得歷史數據:', err)
+        setError(err instanceof Error ? err.message : '未知錯誤')
+        
+        // 發生錯誤時使用假資料（fallback）
+        console.log('⚠️ 使用假資料作為備援')
+        // generateFallbackData()
+      } finally {
+        setIsLoading(false)
       }
-      
-      setHistoricalData(data)
-      // 更新當前數值為最新一筆
-      setCurrentTemp(data[data.length - 1].temperature)
-      setCurrentHumidity(data[data.length - 1].humidity)
     }
 
-    generateFakeData()
+    // 備援：生成假資料（當 API 連線失敗時使用）
+    // const generateFallbackData = () => {
+    //   const data: SensorData[] = []
+    //   const now = new Date()
+      
+    //   for (let i = 29; i >= 0; i--) {
+    //     const time = new Date(now.getTime() - i * 60000) // 每分鐘一筆
+    //     data.push({
+    //       timestamp: time.toLocaleTimeString('zh-TW', { 
+    //         hour: '2-digit', 
+    //         minute: '2-digit',
+    //         second: '2-digit'
+    //       }),
+    //       temperature: 25 + Math.random() * 8,
+    //       humidity: 50 + Math.random() * 30
+    //     })
+    //   }
+      
+    //   setHistoricalData(data)
+    //   if (data.length > 0) {
+    //     const latest = data[data.length - 1]
+    //     setCurrentTemp(latest.temperature)
+    //     setCurrentHumidity(latest.humidity)
+    //   }
+    // }
 
-    // 模擬每 5 秒更新一次數據
-    const interval = setInterval(() => {
-      const now = new Date()
-      const newData: SensorData = {
-        timestamp: now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-        temperature: 25 + Math.random() * 8,
-        humidity: 50 + Math.random() * 30
-      }
-
-      setHistoricalData(prev => [...prev.slice(1), newData])
-      setCurrentTemp(newData.temperature)
-      setCurrentHumidity(newData.humidity)
-
-      // 模擬警報觸發（10% 機率）
-      if (Math.random() > 0.9) {
-        const alertType = newData.temperature > 30 ? 'danger' : 'warning'
-        const alertMessage = newData.temperature > 30 
-          ? `⚠️ 溫度過高！目前 ${newData.temperature.toFixed(1)}°C`
-          : `⚡ 濕度異常：${newData.humidity.toFixed(1)}%`
-        
-        const newAlert: Alert = {
-          id: Date.now(),
-          message: alertMessage,
-          type: alertType,
-          timestamp: now.toLocaleTimeString('zh-TW')
-        }
-
-        setAlerts(prev => [newAlert, ...prev].slice(0, 3)) // 只保留最新 3 則
-      }
-    }, 5000)
-
-    return () => clearInterval(interval)
+    fetchHistoricalData()
   }, [])
 
   // 準備圖表數據
@@ -196,9 +240,26 @@ function App() {
         <h1>🏠 室內環境監控系統</h1>
         <div className="connection-status">
           <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
-          <span>{isConnected ? 'WebSocket 已連線' : '連線中斷'}</span>
+          <span>{isConnected ? 'API 已連線' : '連線中斷'}</span>
         </div>
       </header>
+
+      {/* 錯誤提示 */}
+      {error && (
+        <div className="alert alert-danger">
+          <div className="alert-content">
+            <span className="alert-message">⚠️ 連線錯誤：{error}</span>
+            <span className="alert-time">使用假資料顯示</span>
+          </div>
+        </div>
+      )}
+
+      {/* 載入中提示 */}
+      {isLoading && (
+        <div className="loading-overlay">
+          <div className="loading-spinner">載入中...</div>
+        </div>
+      )}
 
       {/* 警報通知區 */}
       {alerts.length > 0 && (
