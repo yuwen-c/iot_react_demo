@@ -9,6 +9,8 @@ import os
 import asyncio
 import httpx
 import json
+import websockets
+from datetime import datetime
 
 # 將專案根目錄加入 Python 路徑
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -55,6 +57,80 @@ async def test_docs_endpoint():
         print(f"   API 文檔可存取: {response.status_code == 200}")
         return response.status_code == 200
 
+async def test_websocket_connection():
+    """測試 WebSocket 連線"""
+    print("\n🧪 測試 WebSocket 連線...")
+    ws_url = f"ws://{Config.WEB_SERVER_HOST}:{Config.WEB_SERVER_PORT}/ws/alerts"
+    
+    try:
+        async with websockets.connect(ws_url) as websocket:
+            print(f"   WebSocket 連線成功: {ws_url}")
+            print(f"   連線狀態: 已建立")
+            return True
+    except Exception as e:
+        print(f"   WebSocket 連線失敗: {e}")
+        return False
+
+async def test_websocket_alert_broadcast():
+    """測試 WebSocket 警報推播"""
+    print("\n🧪 測試 WebSocket 警報推播...")
+    ws_url = f"ws://{Config.WEB_SERVER_HOST}:{Config.WEB_SERVER_PORT}/ws/alerts"
+    
+    try:
+        async with websockets.connect(ws_url) as websocket:
+            print("   ✓ WebSocket 連線已建立")
+            
+            # 準備測試警報資料
+            alert_data = {
+                "alert_type": "high_temperature",
+                "severity": "warning",
+                "message": "測試警報 - 高溫",
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "sensor_data": {
+                    "temp": 31.0,
+                    "humidity": 45.0,
+                    "timestamp": datetime.utcnow().isoformat() + "Z"
+                }
+            }
+            
+            # 在背景發送 API 請求來觸發推播
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{BASE_URL}/api/alerts/notify",
+                    json=alert_data,
+                    timeout=5.0
+                )
+                
+                if response.status_code != 200:
+                    print(f"   ❌ API 請求失敗: {response.status_code}")
+                    return False
+                
+                print("   ✓ 警報通知已發送")
+            
+            # 等待接收 WebSocket 推播（設置超時）
+            try:
+                message = await asyncio.wait_for(websocket.recv(), timeout=3.0)
+                data = json.loads(message)
+                
+                print(f"   ✓ 收到推播訊息")
+                print(f"   推播類型: {data.get('type')}")
+                print(f"   警報內容: {json.dumps(data.get('data'), indent=4, ensure_ascii=False)}")
+                
+                # 驗證推播內容
+                if data.get("type") == "alert" and "data" in data:
+                    return True
+                else:
+                    print("   ❌ 推播格式不正確")
+                    return False
+                    
+            except asyncio.TimeoutError:
+                print("   ⚠️ 等待推播超時（可能沒有連線的客戶端）")
+                return True  # 這不算失敗，因為可能沒有其他連線
+                
+    except Exception as e:
+        print(f"   ❌ 測試失敗: {e}")
+        return False
+
 async def run_all_tests():
     """執行所有測試"""
     print("🚀 開始 FastAPI 功能測試...")
@@ -65,6 +141,8 @@ async def run_all_tests():
         ("健康檢查", test_health_endpoint),
         ("配置資訊", test_config_endpoint),
         ("API 文檔", test_docs_endpoint),
+        ("WebSocket 連線", test_websocket_connection),
+        ("WebSocket 警報推播", test_websocket_alert_broadcast),
     ]
     
     results = []

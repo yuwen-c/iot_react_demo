@@ -88,7 +88,19 @@ uv run uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
 cd frontend && npm run dev
 ```
 
+### 5. 跑測試
+
+```bash
+# 執行所有測試
+uv run pytest server/tests/ -v
+
+# 只執行 WebSocket 測試
+uv run pytest server/tests/test_websocket.py -v
+
+```
+
 ## 技術棧
+
 - **Python 環境**: uv + 共用虛擬環境
 - **MQTT**: Eclipse Mosquitto
 - **後端**: Python + FastAPI + SQLite
@@ -96,6 +108,7 @@ cd frontend && npm run dev
 - **通訊**: WebSocket + MQTT + HTTP
 
 ## 共用 Python 依賴
+
 所有 Python 模組共用同一個 uv 環境，依賴定義在 `pyproject.toml`：
 - `paho-mqtt` - MQTT 客戶端
 - `fastapi` - Web 框架

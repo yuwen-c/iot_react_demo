@@ -9,7 +9,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from pydantic import BaseModel, Field
 
-from server.core import get_db_manager
+from server.core import get_db_manager, manager
 from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
@@ -82,7 +82,20 @@ async def notify_alert(alert: AlertNotificationRequest):
             }
         )
     
-    # TODO: 實作 WebSocket 推播功能
+    # 實作 WebSocket 推播功能
+    # 將警報推播給所有連線的前端客戶端
+    try:
+        await manager.broadcast_alert({
+            "alert_type": alert.alert_type,
+            "severity": alert.severity,
+            "message": alert.message,
+            "timestamp": alert.timestamp,
+            "sensor_data": alert.sensor_data
+        })
+        print(f"✅ 警報已推播: {alert.alert_type} - {alert.message}")
+    except Exception as e:
+        print(f"❌ WebSocket 推播失敗: {e}")
+        # 即使推播失敗，仍然回傳成功（因為警報已被接收）
     
     return JSONResponse(
         status_code=200,

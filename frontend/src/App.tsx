@@ -11,7 +11,7 @@ import {
   Filler            // 填充區域（折線下方的漸層色）
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
-import { API_ENDPOINTS, CONFIG } from './config'
+import { API_ENDPOINTS, CONFIG, WS_ENDPOINTS } from './config'
 import './App.css'
 
 // 註冊 Chart.js 組件
@@ -35,8 +35,24 @@ interface SensorData {
 interface Alert {
   id: number
   message: string
-  type: 'warning' | 'danger'
+  type: 'warning' | 'danger' | 'info'
   timestamp: string
+}
+
+// WebSocket 訊息格式
+interface WebSocketMessage {
+  type: 'alert'
+  data: {
+    alert_type: string
+    severity: string
+    message: string
+    timestamp: string
+    sensor_data: {
+      temp: number
+      humidity: number
+    }
+  }
+  broadcast_time: string
 }
 
 // 後端 API 回傳的資料格式
@@ -49,11 +65,9 @@ interface ApiSensorData {
 }
 
 function App() {
-  const [currentTemp, setCurrentTemp] = useState<number>(0)
-  const [currentHumidity, setCurrentHumidity] = useState<number>(0)
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [historicalData, setHistoricalData] = useState<SensorData[]>([])
-  const [isConnected] = useState<boolean>(true) // 之後會連接真實 WebSocket
+  const [isConnected, setIsConnected] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -95,13 +109,6 @@ function App() {
           
           setHistoricalData(formattedData)
           
-          // 設定當前數值為最新一筆（陣列最後一個）
-          if (formattedData.length > 0) {
-            const latest = formattedData[formattedData.length - 1]
-            setCurrentTemp(latest.temperature)
-            setCurrentHumidity(latest.humidity)
-          }
-          
           console.log('✅ 成功載入歷史數據，共', formattedData.length, '筆')
         } else {
           throw new Error('API 回傳格式錯誤')
@@ -109,43 +116,108 @@ function App() {
       } catch (err) {
         console.error('❌ 無法取得歷史數據:', err)
         setError(err instanceof Error ? err.message : '未知錯誤')
-        
-        // 發生錯誤時使用假資料（fallback）
-        console.log('⚠️ 使用假資料作為備援')
-        // generateFallbackData()
       } finally {
         setIsLoading(false)
       }
     }
 
-    // 備援：生成假資料（當 API 連線失敗時使用）
-    // const generateFallbackData = () => {
-    //   const data: SensorData[] = []
-    //   const now = new Date()
-      
-    //   for (let i = 29; i >= 0; i--) {
-    //     const time = new Date(now.getTime() - i * 60000) // 每分鐘一筆
-    //     data.push({
-    //       timestamp: time.toLocaleTimeString('zh-TW', { 
-    //         hour: '2-digit', 
-    //         minute: '2-digit',
-    //         second: '2-digit'
-    //       }),
-    //       temperature: 25 + Math.random() * 8,
-    //       humidity: 50 + Math.random() * 30
-    //     })
-    //   }
-      
-    //   setHistoricalData(data)
-    //   if (data.length > 0) {
-    //     const latest = data[data.length - 1]
-    //     setCurrentTemp(latest.temperature)
-    //     setCurrentHumidity(latest.humidity)
-    //   }
-    // }
-
     fetchHistoricalData()
   }, [])
+
+  // WebSocket 連接管理
+  useEffect(() => {
+    let ws: WebSocket | null = null
+    let reconnectTimer: number | null = null
+    let isUnmounting = false
+
+    const connectWebSocket = () => {
+      try {
+        console.log('🔌 正在連接 WebSocket...', WS_ENDPOINTS.alerts)
+        ws = new WebSocket(WS_ENDPOINTS.alerts)
+
+        ws.onopen = () => {
+          console.log('✅ WebSocket 連線已建立')
+          setIsConnected(true)
+          setError(null)
+        }
+
+        ws.onmessage = (event) => {
+          try {
+            const message: WebSocketMessage = JSON.parse(event.data)
+            console.log('📨 收到 WebSocket 訊息:', message)
+
+            if (message.type === 'alert') {
+              const { severity, message: alertMessage, timestamp } = message.data
+              
+              // 將嚴重程度映射到警報類型
+              const alertType = severity === 'error' ? 'danger' : 
+                               severity === 'warning' ? 'warning' : 'info'
+              
+              // 格式化時間
+              const formattedTime = formatTimestamp(timestamp)
+              
+              // 建立新警報
+              const newAlert: Alert = {
+                id: Date.now(),
+                message: alertMessage,
+                type: alertType,
+                timestamp: formattedTime
+              }
+
+              // 添加警報（限制最大顯示數量）
+              setAlerts(prev => {
+                const updated = [newAlert, ...prev]
+                return updated.slice(0, CONFIG.MAX_ALERTS_DISPLAY)
+              })
+
+              console.log('🚨 新增警報:', newAlert)
+            }
+          } catch (err) {
+            console.error('❌ 解析 WebSocket 訊息失敗:', err)
+          }
+        }
+
+        ws.onerror = (error) => {
+          console.error('❌ WebSocket 錯誤:', error)
+          setIsConnected(false)
+        }
+
+        ws.onclose = () => {
+          console.log('🔌 WebSocket 連線已關閉')
+          setIsConnected(false)
+
+          // 如果不是主動卸載，則嘗試重新連接
+          if (!isUnmounting) {
+            console.log('⏰ 5 秒後重新連接...')
+            reconnectTimer = setTimeout(() => {
+              connectWebSocket()
+            }, 5000)
+          }
+        }
+      } catch (err) {
+        console.error('❌ WebSocket 連接失敗:', err)
+        setError('WebSocket 連接失敗')
+        setIsConnected(false)
+      }
+    }
+
+    // 初始化連接
+    connectWebSocket()
+
+    // 清理函數：組件卸載時執行
+    return () => {
+      isUnmounting = true
+      
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer)
+      }
+      
+      if (ws) {
+        console.log('🧹 清理 WebSocket 連接')
+        ws.close()
+      }
+    }
+  }, []) // 空依賴陣列，只在組件掛載時執行一次
 
   // 準備圖表數據
   const chartData = {
@@ -191,7 +263,7 @@ function App() {
       },
       title: {
         display: true,
-        text: '溫濕度歷史趨勢（最近 30 分鐘）',
+        text: '最近30分鐘溫濕度歷史紀錄',
         font: {
           size: 16
         }
@@ -240,7 +312,7 @@ function App() {
         <h1>🏠 室內環境監控系統</h1>
         <div className="connection-status">
           <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}></span>
-          <span>{isConnected ? 'API 已連線' : '連線中斷'}</span>
+          <span>{isConnected ? 'WebSocket 已連線' : 'WebSocket 連線中...'}</span>
         </div>
       </header>
 
@@ -280,31 +352,6 @@ function App() {
 
       {/* 主要內容區 */}
       <div className="main-content">
-        {/* 即時狀態卡區 */}
-        <div className="status-cards">
-          <div className="status-card temperature-card">
-            <div className="card-icon">🌡️</div>
-            <div className="card-content">
-              <h3 className="card-label">溫度</h3>
-              <div className="card-value">{currentTemp.toFixed(1)}<span className="unit">°C</span></div>
-              <div className="card-status">
-                {currentTemp > 30 ? '⚠️ 偏高' : currentTemp < 20 ? '❄️ 偏低' : '✅ 正常'}
-              </div>
-            </div>
-          </div>
-
-          <div className="status-card humidity-card">
-            <div className="card-icon">💧</div>
-            <div className="card-content">
-              <h3 className="card-label">濕度</h3>
-              <div className="card-value">{currentHumidity.toFixed(1)}<span className="unit">%</span></div>
-              <div className="card-status">
-                {currentHumidity > 70 ? '💦 偏高' : currentHumidity < 40 ? '🏜️ 偏低' : '✅ 正常'}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* 圖表區域 */}
         <div className="chart-section">
           <div className="chart-container">
