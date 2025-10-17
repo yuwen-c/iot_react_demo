@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Chart as ChartJS,
   CategoryScale,    // X 軸的分類刻度（用於顯示時間標籤）
@@ -70,6 +70,7 @@ function App() {
   const [isConnected, setIsConnected] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+  const [lastUpdateTime, setLastUpdateTime] = useState<string>('')
 
   // 格式化時間戳記為圖表顯示格式
   const formatTimestamp = (timestamp: string): string => {
@@ -81,48 +82,73 @@ function App() {
     })
   }
 
-  useEffect(() => {
-    const fetchHistoricalData = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        
-        // 呼叫後端 API 取得最近 N 筆數據
-        const response = await fetch(`${API_ENDPOINTS.sensor.readings}?limit=${CONFIG.HISTORY_DATA_LIMIT}`)
-        
-        if (!response.ok) {
-          throw new Error(`HTTP 錯誤！狀態碼: ${response.status}`)
-        }
-        
-        const result = await response.json()
-        
-        if (result.status === 'success' && result.data) {
-          // 後端回傳的資料是降序（最新在前），需要反轉成升序（舊到新）
-          const reversedData = [...result.data].reverse()
-          
-          // 轉換資料格式
-          const formattedData: SensorData[] = reversedData.map((item: ApiSensorData) => ({
-            timestamp: formatTimestamp(item.timestamp),
-            temperature: item.temp,
-            humidity: item.humidity
-          }))
-          
-          setHistoricalData(formattedData)
-          
-          console.log('✅ 成功載入歷史數據，共', formattedData.length, '筆')
-        } else {
-          throw new Error('API 回傳格式錯誤')
-        }
-      } catch (err) {
-        console.error('❌ 無法取得歷史數據:', err)
-        setError(err instanceof Error ? err.message : '未知錯誤')
-      } finally {
-        setIsLoading(false)
+  // 抓取歷史數據的函數（提取出來以便重複使用）
+  // 原本直接宣告在 useEffect 當中，但現在因為要重複使用，所以提取出來，在 useEffect 裡面呼叫；
+  // 而因為這個 function 會被列為 useEffect 的 dependency，如果有改動，就會導致 useEffect 被觸發，而每次元件 render，此 function 都會重新被宣告，導致 function 會改動，這會造成 useEffect 不斷被觸發更新，失去了 dependency 優化的意義，
+  // 因此用 useCallback 包住 function，讓 function 的 ref 不會改變，來避免上述行為。
+  const fetchHistoricalData = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      console.log('🔄 正在更新歷史數據...')
+      
+      const response = await fetch(`${API_ENDPOINTS.sensor.readings}?limit=${CONFIG.HISTORY_DATA_LIMIT}`)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP 錯誤！狀態碼: ${response.status}`)
       }
+      
+      const result = await response.json()
+      
+      if (result.status === 'success' && result.data) {
+        // 後端回傳的資料是降序（最新在前），需要反轉成升序（舊到新）
+        const reversedData = [...result.data].reverse()
+        
+        // 轉換資料格式
+        const formattedData: SensorData[] = reversedData.map((item: ApiSensorData) => ({
+          timestamp: formatTimestamp(item.timestamp),
+          temperature: item.temp,
+          humidity: item.humidity
+        }))
+        
+        setHistoricalData(formattedData)
+        
+        // 記錄最後更新時間
+        const now = new Date()
+        setLastUpdateTime(now.toLocaleTimeString('zh-TW', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        }))
+        
+        console.log('✅ 成功載入歷史數據，共', formattedData.length, '筆')
+      } else {
+        throw new Error('API 回傳格式錯誤')
+      }
+    } catch (err) {
+      console.error('❌ 無法取得歷史數據:', err)
+      setError(err instanceof Error ? err.message : '未知錯誤')
+    } finally {
+      setIsLoading(false)
     }
+  }, []) // 空依賴陣列，因為內部使用的都是穩定的函數和常量
 
+  useEffect(() => {
     fetchHistoricalData()
-  }, [])
+    
+    // 設定輪詢
+    const pollingInterval = setInterval(() => {
+      console.log('⏰ 輪詢時間到，重新抓取歷史數據...')
+      fetchHistoricalData()
+    }, 5 * 60 * 1000) // 5 分鐘 = 300000 毫秒
+    
+    // 組件卸載時清除輪詢
+    return () => {
+      console.log('🧹 清理輪詢定時器')
+      clearInterval(pollingInterval)
+    }
+  }, [fetchHistoricalData]) // 加入 fetchHistoricalData 依賴
 
   // WebSocket 連接管理
   useEffect(() => {
@@ -354,6 +380,20 @@ function App() {
       <div className="main-content">
         {/* 圖表區域 */}
         <div className="chart-section">
+          {/* 圖表資訊列 */}
+          {lastUpdateTime && (
+            <div style={{ 
+              padding: '10px', 
+              textAlign: 'right', 
+              color: '#666',
+              fontSize: '14px'
+            }}>
+              📊 最後更新時間：{lastUpdateTime}
+              <span style={{ marginLeft: '10px', color: '#999' }}>
+                （每 5 分鐘自動更新）
+              </span>
+            </div>
+          )}
           <div className="chart-container">
             <Line data={chartData} options={chartOptions} />
           </div>
