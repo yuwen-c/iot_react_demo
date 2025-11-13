@@ -114,4 +114,41 @@ uv run pytest server/tests/test_websocket.py -v
 - `fastapi` - Web 框架
 - `uvicorn` - ASGI 伺服器
 - `websockets` - WebSocket 支援
-- `requests` - HTTP 客戶端 (controller 通知 server) 
+- `requests` - HTTP 客戶端 (controller 通知 server)
+
+## 簡單架構圖
+
+```mermaid
+flowchart LR
+    %% 定義節點
+    Sensor[Sensor<br/>sensor.py<br/><small>模擬感測器</small>]
+    Broker[MQTT Broker<br/>Mosquitto<br/><small>消息中介</small>]
+    Controller[Controller<br/>controller.py<br/><small>訂閱/判斷/寫入</small>]
+    DB[(Database<br/>SQLite<br/><small>environment.db</small>)]
+    Server[Web Server<br/>FastAPI<br/><small>REST + WebSocket</small>]
+    Frontend[Frontend<br/>React<br/><small>視覺化界面</small>]
+
+    %% 定義連接與數據流向
+    Sensor -->|Publish<br/>溫濕度數據| Broker
+    Broker -->|Controller 已訂閱<br/>Broker推送數據| Controller
+    Controller -->|儲存數據| DB
+    Controller -->|HTTP POST<br/>警報通知| Server
+    Server -->|查詢歷史數據| DB
+    Server <-->|WebSocket<br/>即時推播警報| Frontend
+    Frontend -->|REST API<br/>查詢數據| Server
+
+    %% 樣式定義（低彩度配色）
+    classDef sensorStyle fill:#d4d4d8,stroke:#71717a,color:#18181b
+    classDef brokerStyle fill:#e4e4e7,stroke:#a1a1aa,color:#18181b
+    classDef controllerStyle fill:#dbeafe,stroke:#93c5fd,color:#1e3a8a
+    classDef dbStyle fill:#e9d5ff,stroke:#c084fc,color:#581c87
+    classDef serverStyle fill:#d1fae5,stroke:#6ee7b7,color:#065f46
+    classDef frontendStyle fill:#fecaca,stroke:#f87171,color:#7f1d1d
+
+    class Sensor sensorStyle
+    class Broker brokerStyle
+    class Controller controllerStyle
+    class DB dbStyle
+    class Server serverStyle
+    class Frontend frontendStyle
+```
